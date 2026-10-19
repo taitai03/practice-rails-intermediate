@@ -1,0 +1,54 @@
+# クラス設計と例外
+
+## 背景
+
+在庫が足りない商品にも注文が入り、在庫がマイナスになることがあります。倉庫から「マイナスの在庫の商品は発送できないので、注文の時点で止めてほしい」と依頼がありました。在庫の引き当て処理（`app/models/stock_allocator.rb`）に、在庫不足のときの例外を追加します。
+
+## やること
+
+### 1. Stockable モジュール
+
+`app/models/concerns/stockable.rb` に、在庫を持つものの性質を表す `Stockable` モジュールを作り、`Product` に include する。
+
+| 名前 | 内容 |
+| --- | --- |
+| `Stockable::LOW_STOCK_THRESHOLD` | `10` |
+| `#in_stock?(quantity = 1)` | 在庫が `quantity` 以上あれば `true` |
+| `#low_stock?` | 在庫が `LOW_STOCK_THRESHOLD` 以下なら `true` |
+
+### 2. 在庫不足の例外
+
+`StockAllocator::InsufficientStockError` を作る。
+
+- `StandardError` を継承する
+- `product`（足りない商品）、`requested`（注文した数）、`available`（在庫の数）を読める
+- メッセージは `「国産こしひかり 5kg」の在庫が足りません（注文: 3個、在庫: 2個）` の形
+
+### 3. 引き当て
+
+`StockAllocator#allocate!` を次のように直す。
+
+- すべての明細の在庫が足りることを **確かめてから**、在庫を減らす
+- 足りない商品があれば `InsufficientStockError` を投げ、**どの商品の在庫も減らさない**
+- 同じ商品が複数の明細にあれば、合計の数量で確かめる
+
+### 4. 注文の作成
+
+`OrderCreator` で `InsufficientStockError` を受け止め、同じメッセージの `OrderCreator::Error` にする（会員向けAPIは 422 でメッセージを返す）。注文もポイントも変えないこと。
+
+## 受け入れ条件
+
+- [ ] `Stockable` が上の仕様どおりに動き、`Product` に include されている
+- [ ] 在庫不足のとき `InsufficientStockError` を投げ、在庫を減らさない
+- [ ] 注文の作成で在庫が足りなければ、注文もポイントも変えずに `OrderCreator::Error` になる
+- [ ] 会員向けAPIで、在庫が足りない理由を 422 で返す
+- [ ] 既存のテストがすべて通る
+
+## 参考
+
+- テスト: `spec/tasks/stock_allocation_task_spec.rb`
+- Rails ガイド: Active Support Concern https://railsguides.jp/active_support_core_extensions.html
+
+---
+
+課題で用意したテストと `.github/` は変更しないでください。変更したPRは判定の対象外になります。
