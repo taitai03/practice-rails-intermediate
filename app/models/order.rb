@@ -13,6 +13,8 @@ class Order < ApplicationRecord
   # 売上の集計に含める注文（キャンセルを除く。業務仕様 3.2）
   scope :for_sales, -> { where.not(status: "cancelled") }
   scope :recent, -> { order(ordered_at: :desc, id: :desc) }
+  # 期間で絞り込む（2026/03 ダッシュボードの表示が遅い件の対応で追加）
+  scope :ordered_in, ->(range) { where(ordered_at: range) }
 
   def status_label
     STATUS_LABELS.fetch(status)

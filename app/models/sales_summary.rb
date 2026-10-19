@@ -11,13 +11,13 @@ class SalesSummary
 
   # 今月の売上と件数
   def this_month
-    summarize(Order.for_sales.where(ordered_at: @now.all_month))
+    summarize(Order.ordered_in(@now.all_month))
   end
 
   # 直近 days 日間の、日ごとの売上と件数
   def daily(days: 7)
     range = (@now.to_date - (days - 1))..@now.to_date
-    orders = Order.for_sales.where(ordered_at: range.first.beginning_of_day..@now.end_of_day)
+    orders = Order.ordered_in(range.first.beginning_of_day..@now.end_of_day)
     by_day = orders.group_by { |o| o.ordered_at.to_date }
     range.map { |day| { day:, **summarize(by_day.fetch(day, [])) } }
   end
