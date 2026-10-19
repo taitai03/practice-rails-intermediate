@@ -9,6 +9,6 @@ module PointCalculator
   def points(tax_included, rank)
     return 0 if tax_included <= 0
 
-    tax_included * RATES.fetch(rank.to_s) / 100
+    (tax_included * RATES.fetch(rank.to_s) / 100.0).round
   end
 end
